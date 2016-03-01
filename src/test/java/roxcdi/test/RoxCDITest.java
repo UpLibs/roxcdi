@@ -1,4 +1,4 @@
-package roxcdi;
+package roxcdi.test;
 
 import org.junit.Test;
 
