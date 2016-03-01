@@ -19,34 +19,28 @@ public class Package {
 		
 		String className = stackTraceElement.getClassName() ;
 		
-		String packageName = extractClassNamePackage(className);
+		String packageName = extractClassPackageName(className);
 		return packageName ;
 	}
 
-	static private final HashMap<String, String> extractClassNamePackageCache = new HashMap<>() ;
+	static private final HashMap<String, String> extractClassPackageName_Cache = new HashMap<>() ;
 	
-	private static String extractClassNamePackage(String className) {
+	public static String extractClassPackageName(String className) {
 		String packageName ;
 		
-		synchronized (extractClassNamePackageCache) {
-			packageName = extractClassNamePackageCache.get(className) ;
+		synchronized (extractClassPackageName_Cache) {
+			packageName = extractClassPackageName_Cache.get(className) ;
 		}
 		
 		if (packageName != null) return packageName ;
 		
 		packageName = className.indexOf(".") < 0 ? "" : className.replaceFirst("\\.[^\\.]+$", "") ;
 		
-		synchronized (extractClassNamePackageCache) {
-			extractClassNamePackageCache.put(className, packageName) ;
+		synchronized (extractClassPackageName_Cache) {
+			extractClassPackageName_Cache.put(className, packageName) ;
 		}
 		
 		return packageName;
-	}
-	
-	public static void main(String[] args) {
-		
-		System.out.println( getName() );
-		
 	}
 	
 }
