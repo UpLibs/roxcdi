@@ -145,9 +145,17 @@ public class PropertyContext {
 	
 	////////////////////////////////////////////////////////////
 	
-	private final HashMap<String, String> properties = new HashMap<>() ;
+	private PropertyContext parent ;
+	
+	final private HashMap<String, String> properties = new HashMap<>() ;
 	
 	public PropertyContext(Object... props) {
+		this(null, props) ;
+	}
+	
+	public PropertyContext(PropertyContext parent, Object... props) {
+		this.parent = parent ;
+		
 		for (int i = 0; i < props.length; i+=2) {
 			Object k = props[i] ;
 			Object v = props[i+1] ;
@@ -174,6 +182,14 @@ public class PropertyContext {
 			
 			properties.put(kStr, vStr);
 		}
+	}
+	
+	public PropertyContext getParent() {
+		return parent;
+	}
+	
+	public void setParent(PropertyContext parent) {
+		this.parent = parent;
 	}
 	
 	public void clear() {
@@ -227,12 +243,20 @@ public class PropertyContext {
 
 	public String getProperty(String name) {
 		String val = get(name) ;
-		return val != null ? val : SYSTEM.getProperty(name) ;
+		if (val != null) return val ;
+		
+		if (parent != null) return parent.getProperty(name) ;
+		
+		return SYSTEM.getProperty(name) ;
 	}
 	
 	public String getEnv(String name) {
 		String val = get(name) ;
-		return val != null ? val : SYSTEM.getEnv(name) ;
+		if (val != null) return val ;
+		
+		if (parent != null) return parent.getEnv(name) ;
+		
+		return SYSTEM.getEnv(name) ;
 	}
 	
 }
