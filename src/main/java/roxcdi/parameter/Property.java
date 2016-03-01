@@ -10,8 +10,8 @@ final public class Property {
 	
 	final private String name ;
 
-	public Property(String name) {
-		this.name = name;
+	public Property(String fullName) {
+		this.name = fullName;
 	}
 	
 	public Property(String packageName, String name) {
@@ -44,19 +44,44 @@ final public class Property {
 		return name;
 	}
 	
+	private PropertyContext defaultContext ;
+	
+	public PropertyContext getDefaultContext() {
+		return defaultContext;
+	}
+	
+	public Property withDefaultContext(PropertyContext defaultContext) {
+		this.defaultContext = defaultContext ;
+		return this ;
+	}
+	
+	public PropertyContext getContext() {
+		return PropertyContext.getContext(defaultContext) ;
+	}
+	
 	public String get() {
-		return resolveValue(this.defaultValue, this.scanEnv);
+		return get(getContext()) ;
+	}
+	
+	public String get(PropertyContext propertyContext) {
+		return resolveValue(this.defaultValue, this.scanEnv, propertyContext);
 	}
 	
 	public String get(String defaultValue) {
-		return resolveValue(defaultValue, this.scanEnv);
+		return get(defaultValue, getContext()) ;
 	}
 	
-	public String resolveValue(String defaultValue, boolean scanEnv) {
-		String val = System.getProperty(name) ;
+	public String get(String defaultValue, PropertyContext propertyContext) {
+		return resolveValue(defaultValue, this.scanEnv, propertyContext);
+	}
+	
+	public String resolveValue(String defaultValue, boolean scanEnv, PropertyContext propertyContext) {
+		if (propertyContext == null) propertyContext = PropertyContext.getContext() ;
+		
+		String val = propertyContext.getProperty(name) ;
 		
 		if (val == null && scanEnv) {
-			val = System.getenv(name) ;
+			val = propertyContext.getEnv(name) ;
 		}
 		
 		if (val == null) {
@@ -69,24 +94,44 @@ final public class Property {
 	///////////////////////////////////////////
 
 	public boolean isDefined() {
-		return resolveValue(null, this.scanEnv) != null ;
+		return isDefined(getContext());
+	}
+	
+	public boolean isDefined(PropertyContext propertyContext) {
+		return resolveValue(null, this.scanEnv, propertyContext) != null ;
 	}
 	
 	public boolean isNotDefined() {
+		return isNotDefined(getContext()) ;
+	}
+	
+	public boolean isNotDefined(PropertyContext propertyContext) {
 		return !isDefined() ;
 	}
 	
 	public boolean isDefinedAndNotEmpty() {
-		String val = resolveValue(null, this.scanEnv) ;
+		return isDefinedAndNotEmpty(getContext());
+	}
+	
+	public boolean isDefinedAndNotEmpty(PropertyContext propertyContext) {
+		String val = resolveValue(null, this.scanEnv, propertyContext) ;
 		return val != null && !val.isEmpty() ;
 	}
 	
 	public String getString() {
-		return get() ;
+		return getString(getContext()) ;
+	}
+	
+	public String getString(PropertyContext propertyContext) {
+		return get(propertyContext) ;
 	}
 	
 	public Boolean getBoolean() {
-		String val = get() ;
+		return getBoolean(getContext());
+	}
+	
+	public Boolean getBoolean(PropertyContext propertyContext) {
+		String val = get(propertyContext) ;
 		if (val == null) return false ;
 		
 		if (val.isEmpty() || val.equals("false") || val.equals("null") || val.equals("undef")) return false ;
@@ -95,22 +140,38 @@ final public class Property {
 	}
 	
 	public Integer getInteger() {
-		String val = get() ;
+		return getInteger(getContext()) ;
+	}
+	
+	public Integer getInteger(PropertyContext propertyContext) {
+		String val = get(propertyContext) ;
 		return val != null ? Integer.parseInt(val) : null ;
 	}
 	
 	public Long getLong() {
-		String val = get() ;
+		return getLong(getContext()) ;
+	}
+	
+	public Long getLong(PropertyContext propertyContext) {
+		String val = get(propertyContext) ;
 		return val != null ? Long.parseLong(val) : null ;
 	}
 	
 	public Float getFloat() {
-		String val = get() ;
+		return getFloat(getContext()) ;
+	}
+	
+	public Float getFloat(PropertyContext propertyContext) {
+		String val = get(propertyContext) ;
 		return val != null ? Float.parseFloat(val) : null ;
 	}
 	
 	public Double getDouble() {
-		String val = get() ;
+		return getDouble(getContext()) ;
+	}
+	
+	public Double getDouble(PropertyContext propertyContext) {
+		String val = get(propertyContext) ;
 		return val != null ? Double.parseDouble(val) : null ;
 	}
 	

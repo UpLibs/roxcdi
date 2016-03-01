@@ -5,14 +5,14 @@ import java.util.HashMap;
 public class Package {
 
 	static public String getName() {
-		return getName(0) ;
+		return getName(1) ;
 	}
 	
-	static public String getName(int ignoreCallerLeves) {
+	static public String getName(int ignoreCallersLeves) {
 		Throwable throwable = new Throwable() ;
 		StackTraceElement[] stackTrace = throwable.getStackTrace() ;
 		
-		int idx = 1+ignoreCallerLeves ;
+		int idx = 1+ignoreCallersLeves ;
 		if (idx >= stackTrace.length) idx = stackTrace.length-1 ;
 		
 		StackTraceElement stackTraceElement = stackTrace[idx] ;
