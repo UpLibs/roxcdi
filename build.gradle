@@ -96,6 +96,12 @@ task copyTestBeans(type: Copy) {
     into "${project.buildDir}/classes/test/META-INF"
 }
 
+test {
+	// Force a new JVM for every test:
+	forkEvery = 1	
+
+}
+
 test.dependsOn([copyBeans, copyTestBeans])
 
 
