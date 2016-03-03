@@ -58,7 +58,7 @@ public class PropertyContext {
 	
 	////////////////////////////////////////////////////////////
 	
-	static final SystemPropertyContext SYSTEM = new SystemPropertyContext() ; 
+	public static final SystemPropertyContext SYSTEM = new SystemPropertyContext() ; 
 	
 	final static public class SystemPropertyContext extends PropertyContext {
 		@Override
