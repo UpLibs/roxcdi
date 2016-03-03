@@ -14,8 +14,6 @@ import javax.enterprise.inject.Instance;
 import org.jboss.weld.environment.se.Weld;
 import org.jboss.weld.environment.se.WeldContainer;
 
-import roxtools.FileUtils;
-
 public class TestWeldClassLoaderBeansXML {
 
 	static final private Charset CHARSET_LATIN1 = Charset.forName("iso-8859-1") ;
@@ -33,7 +31,9 @@ public class TestWeldClassLoaderBeansXML {
 		
 		System.out.println(content);
 		
-		File tempDirectory = FileUtils.createTempDirectory("weld-beans-") ;
+		File tempDirectory = File.createTempFile("weld-beans-", "dir") ;
+		tempDirectory.delete() ;
+		tempDirectory.mkdir() ;
 		
 		File fileMetaInf = new File(tempDirectory,"META-INF") ;
 		fileMetaInf.mkdirs() ;
