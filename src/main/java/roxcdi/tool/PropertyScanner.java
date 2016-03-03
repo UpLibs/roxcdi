@@ -88,12 +88,23 @@ public class PropertyScanner {
 					e.printStackTrace();
 				}
 				
-				if ( showField ) {
-					System.out.println( field +" >>> "+ ( showValue ? prop : prop.getName() ) );	
+				try {
+					if ( showField ) {
+						System.out.println( field +" >>> "+ ( showValue ? prop : prop.getName() ) );	
+					}
+					else if (prop != null) {
+						System.out.println( ( showValue ? prop : prop.getName() ) );
+					}	
+				} catch (Exception e) {
+					if ( showField ) {
+						System.out.println( field +" >>> ERROR: "+ e.getMessage() );	
+					}
+					else if (prop != null) {
+						System.out.println("ERROR: "+ e.getMessage() );
+					}
 				}
-				else if (prop != null) {
-					System.out.println( ( showValue ? prop : prop.getName() ) );
-				}
+				
+				
 			}	
 		}
 		else {
@@ -129,12 +140,12 @@ public class PropertyScanner {
 			System.out.println();
 			System.out.println("OPTIONS:");
 			System.out.println();
-			System.out.println(  " -h           This help.");
+			System.out.println(  " -h       This help.");
 			System.out.println(  " -s       Show only static Property Feilds (default).");
 			System.out.println(  " -a       Show all Property Feilds (even not static).");
 			System.out.println(  " -v       Show Property values (static only).");
 			System.out.println(  " -f       Show Property Field.");
-			System.out.println(  " -rox       Show Property Field.");
+			System.out.println(  " -rox     Show Property Field.");
 			System.out.println();
 			System.exit(0);
 		}
