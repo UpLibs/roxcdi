@@ -23,6 +23,30 @@ public class RoxCDI {
 		return roxCDI.getIfInitialized();
 	}
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	static public <U> U getBean(Class<U> subtype) {
+		Instance<U> instance = getCDI().select((Class)subtype) ;
+		return instance != null ? instance.get() : null ;
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	static public <U> U getBean(Class<U> subtype, Annotation... qualifiers) {
+		Instance<U> instance = getCDI().select((Class)subtype, qualifiers) ;
+		return instance != null ? instance.get() : null ;
+	}
+	
+	@SuppressWarnings({ "unchecked" })
+	static public <U> U getBean(Annotation subtype, Annotation qualifiers) {
+		Instance<U> instance = (Instance<U>) getCDI().select(subtype, qualifiers) ;
+		return instance != null ? instance.get() : null ;
+	}
+	
+	@SuppressWarnings({ "unchecked" })
+	static public <U> U getBean(Annotation... qualifiers) {
+		Instance<U> instance = (Instance<U>) getCDI().select(qualifiers) ;
+		return instance != null ? instance.get() : null ;
+	}
+	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	static public <U> Instance<U> select(Class<U> subtype) {
 		return getCDI().select((Class)subtype) ;
