@@ -99,7 +99,7 @@ task copyTestBeans(type: Copy) {
 test {
 	// Force a new JVM for every test:
 	forkEvery = 1	
-
+	maxParallelForks = 1
 }
 
 test.dependsOn([copyBeans, copyTestBeans])
