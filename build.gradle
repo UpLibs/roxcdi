@@ -86,3 +86,18 @@ uploadArchives {
         }
     }
 }
+
+
+task copyBeans(type: Copy) {
+    from "${project.projectDir}/src/main/resources/META-INF/beans.xml"
+    into "${project.buildDir}/classes/main/META-INF"
+}
+
+task copyTestBeans(type: Copy) {
+    from "${project.projectDir}/src/test/resources/META-INF/beans.xml"
+    into "${project.buildDir}/classes/test/META-INF"
+}
+
+test.dependsOn([copyBeans, copyTestBeans])
+
+
