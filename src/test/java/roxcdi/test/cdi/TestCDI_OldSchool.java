@@ -3,6 +3,7 @@ package roxcdi.test.cdi;
 import org.junit.Assert;
 import org.junit.Test;
 
+import roxcdi.RoxCDI;
 import roxcdi.test.cdi.sys.OldSchoolSys;
 
 public class TestCDI_OldSchool {
@@ -20,6 +21,7 @@ public class TestCDI_OldSchool {
 			Assert.assertEquals( 10+i , elem );
 		}
 		
+		Assert.assertTrue( RoxCDI.shutdownCDI() );
 		
 	}
 	

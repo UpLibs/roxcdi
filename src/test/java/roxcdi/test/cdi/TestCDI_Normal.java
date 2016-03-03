@@ -30,6 +30,7 @@ public class TestCDI_Normal {
 			Assert.assertEquals( 10+i , elem );
 		}
 		
+		weldContainer.shutdown();
 		
 	}
 	

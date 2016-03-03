@@ -19,6 +19,10 @@ public class RoxCDI {
 		return roxCDI.get() ;
 	}
 	
+	static public <T extends CDI<?>> T getCDI_IfInitialized() {
+		return roxCDI.getIfInitialized();
+	}
+	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	static public <U> Instance<U> select(Class<U> subtype) {
 		return getCDI().select((Class)subtype) ;
@@ -55,7 +59,29 @@ public class RoxCDI {
 		catch (IllegalStateException e) {}
 		
 		if (cdi == null) {
-			cdi = getCDIInstantiated() ;	
+			cdi = getCDIInstantiated(true) ;	
+		}
+		
+		if (cdi != null) {
+			return (T)cdi ; 
+		}
+		else {
+			return null ;	
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public <T extends CDI<?>> T getIfInitialized() {
+		
+		CDI<?> cdi = null ;
+		
+		try {
+			cdi = CDI.current() ;
+		}
+		catch (IllegalStateException e) {}
+		
+		if (cdi == null) {
+			cdi = getCDIInstantiated(false) ;	
 		}
 		
 		if (cdi != null) {
@@ -68,8 +94,8 @@ public class RoxCDI {
 	
 	private CDI<?> cdiInstantiated = null ;
 	
-	private CDI<?> getCDIInstantiated() {
-		if (cdiInstantiated == null) {
+	private CDI<?> getCDIInstantiated(boolean autoCreate) {
+		if (cdiInstantiated == null && autoCreate) {
 			synchronized (this) {
 				if (cdiInstantiated != null) return cdiInstantiated ;
 				cdiInstantiated = instantiateCDI() ;
@@ -152,5 +178,101 @@ public class RoxCDI {
 		
 		return instantiator.instantiateCDI() ;
 	}
+	
+	/////////////////////////////////////////////////////
+	
+	static public boolean shutdownCDI() {
+		CDI<?> cdi = getCDI_IfInitialized() ;
+		return shutdown(cdi) ;
+	}
+	
+	static public boolean shutdown(CDI<?> cdi) {
+		if (cdi == null) return false ;
+	
+		if ( isWeldContainer(cdi) ) {
+			return shutdownWeld(cdi) ;
+		}
+		else {
+			return shutdownGeneric(cdi) ;
+		}
+		
+	}
+	
+	private static boolean shutdownWeld(CDI<?> cdi) {
+		
+		try {
+			Object ret = callMethod(cdi, "shutdown") ;
+			if ( ret == Boolean.TRUE ) return true ;
+			if ( ret instanceof Exception ) throw (Exception)ret ;
+			
+			return false;
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			
+			return false ;
+		}
+		
+	}
+
+	private static boolean isWeldContainer(CDI<?> cdi) {
+		String className = cdi.getClass().getName() ;
+		
+		return className.startsWith("org.jboss.weld.") ;
+	}
+	
+	private static boolean shutdownGeneric(CDI<?> cdi) {
+
+		try {
+			Exception error1 = null ;
+			Exception error2 = null ;
+			
+			{
+				Object ret = callMethod(cdi, "shutdown") ;
+				if ( ret == Boolean.TRUE ) return true ;
+				if ( ret instanceof Exception ) error1 = (Exception) ret ;
+			}
+			
+			{
+				Object ret = callMethod(cdi, "close") ;
+				if ( ret == Boolean.TRUE ) return true ;
+				if ( ret instanceof Exception ) error2 = (Exception) ret ;
+			}
+			
+			if (error1 != null)	throw error1 ;
+			if (error2 != null)	throw error2 ;
+			
+			return false ;
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			
+			return false ;
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	private static Object callMethod(CDI<?> cdi, String methodName) {
+		Class<? extends CDI> clazz = cdi.getClass() ;
+		
+		Method method = null ;
+		try {
+			method = clazz.getMethod(methodName) ;
+		}
+		catch (NoSuchMethodException e) {}
+		
+		if (method != null) {
+			try {
+				method.invoke(cdi) ;
+				return Boolean.TRUE ;
+			}
+			catch (Exception e) {
+				return e ;
+			}
+		}
+		
+		return Boolean.FALSE ;
+	}
+
 	
 }
