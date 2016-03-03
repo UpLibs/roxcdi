@@ -10,7 +10,7 @@ public class PackageTest {
 	@Test
 	public void testBasic() {
 		
-		Assert.assertEquals( Package.getName() , "roxcdi.test" );
+		Assert.assertEquals( "roxcdi.test" , Package.getName() );
 		
 	}
 
