@@ -215,7 +215,7 @@ public class RoxCDI {
 			return cdi ;
 		}
 		
-		throw new UnsupportedOperationException("Can't automatically instantiate CDI. Shoud instantiate CDI before call any RoxCDI method, or use RoxCDIInstantiator implementation at property: "+ PROPERTY_CDI_INSTANTIATOR.getName());
+		throw new UnsupportedOperationException("Can't automatically instantiate CDI. Shoud instantiate CDI before call any RoxCDI method! You also can autoload Weld (if present in classpath) using property <"+ PROPERTY_WELD_AUTOLOAD + "> or use RoxCDIInstantiator implementation at property <"+ PROPERTY_CDI_INSTANTIATOR +">");
 	}
 
 	private CDI<?> instantiateWeld() {
