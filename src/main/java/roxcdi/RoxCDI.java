@@ -1,6 +1,7 @@
 package roxcdi ;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import javax.enterprise.inject.Instance;
@@ -9,6 +10,10 @@ import javax.enterprise.inject.spi.CDI;
 import roxcdi.parameter.Property;
 
 public class RoxCDI {
+	
+	private static final String WELD_PROXY_OBJECT_CLASS_NAME = "org.jboss.weld.bean.proxy.ProxyObject";
+	private static final String WELD_CLASS_NAME = "org.jboss.weld.environment.se.Weld";
+	private static final String WELD_PACKAGE = "org.jboss.weld.";
 	
 	final static public Property PROPERTY_CDI_INSTANTIATOR = Property.fromPackage("instantiator") ;
 	final static public Property PROPERTY_WELD_AUTOLOAD = Property.fromPackage("weld.autoload",Boolean.class).withDefault(true) ;
@@ -156,7 +161,7 @@ public class RoxCDI {
 
 	private CDI<?> instantiateWeld() {
 		try {
-			Class<?> weldClass = Class.forName("org.jboss.weld.environment.se.Weld") ;
+			Class<?> weldClass = Class.forName(WELD_CLASS_NAME) ;
 			
 			Object weld = weldClass.newInstance() ;
 			
@@ -173,7 +178,7 @@ public class RoxCDI {
 
 	private boolean isWeldPresentAndAllowed() {
 		try {
-			Class<?> weldClass = Class.forName("org.jboss.weld.environment.se.Weld") ;
+			Class<?> weldClass = Class.forName(WELD_CLASS_NAME) ;
 			
 			if (weldClass != null) {
 				try {
@@ -201,6 +206,94 @@ public class RoxCDI {
 		RoxCDIInstantiator instantiator = instantiatorClass.newInstance() ;
 		
 		return instantiator.instantiateCDI() ;
+	}
+
+	/////////////////////////////////////////////////////
+	
+	static public boolean ensureConstructed(Object obj) {
+		if (obj == null) return false ;
+		
+		if ( isFromWeldProxy(obj) ) {
+			try {
+				return ensureConstructed_WeldProxy(obj);
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+				return false ;
+			}
+		}
+		else {
+			return ensureConstructed_Generic(obj);
+		}
+		
+	}
+	
+	static private boolean ensureConstructed_Generic(Object obj) {
+		obj.toString() ;
+		return true ;
+	}
+
+	static private boolean ensureConstructed_WeldProxy(Object obj) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		
+		Class<? extends Object> clazz = obj.getClass() ;
+		
+		Class<?> weldProxySuperclass = getWeldProxySuperclass(clazz);
+		
+		Method method_getHandler = weldProxySuperclass.getMethod("getHandler") ;
+		
+		Object handler = method_getHandler.invoke(obj) ;
+		
+		if (handler == null) return false ;
+		
+		Method method_getInstance = handler.getClass().getMethod("getInstance") ;
+		
+		Object realObj = method_getInstance.invoke(handler) ;
+		
+		return realObj != null ;
+	}
+	
+	static private boolean isFromWeldProxy(Object obj) {
+		Class<? extends Object> clazz = obj.getClass() ;
+		
+		Class<?> weldProxyClass = getWeldProxySuperclass(clazz);
+		
+		return weldProxyClass != null ;
+	}
+
+	static private Class<?> getWeldProxySuperclass(Class<? extends Object> clazz) {
+		while (true) {
+			if (clazz.getName().equals(WELD_PROXY_OBJECT_CLASS_NAME)) {
+				return clazz ;
+			}
+			
+			Class<?>[] interfaces = clazz.getInterfaces() ;
+			
+			for (Class<?> interf : interfaces) {
+				if ( isInterfaceOfType(interf, WELD_PROXY_OBJECT_CLASS_NAME) ) {
+					return clazz ;
+				}
+			}
+			
+			Class<?> superclass = clazz.getSuperclass() ;
+			if (superclass == null) break ;
+			
+			clazz = superclass ;
+		}
+		return null ;
+	}
+	
+	static private boolean isInterfaceOfType(Class<?> interf, String typeName) {
+		
+		while (true) {
+			if ( interf.getName().equals(typeName) ) return true ;
+			
+			Class<?> superclass = interf.getSuperclass() ;
+			if (superclass == null) break ;
+			
+			interf = superclass ;
+		}
+		
+		return false ;
 	}
 	
 	/////////////////////////////////////////////////////
@@ -242,7 +335,7 @@ public class RoxCDI {
 	private static boolean isWeldContainer(CDI<?> cdi) {
 		String className = cdi.getClass().getName() ;
 		
-		return className.startsWith("org.jboss.weld.") ;
+		return className.startsWith(WELD_PACKAGE) ;
 	}
 	
 	private static boolean shutdownGeneric(CDI<?> cdi) {
