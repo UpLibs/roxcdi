@@ -45,6 +45,10 @@ public class RoxCDI {
 		}
 	}
 	
+	static public <U> U getBean(Class<U> subtype, PropertyContext propertyContext, Class<? extends Annotation> qualifier) {
+		return getBean(subtype, propertyContext, AnnotationProxy.asAnnotation(qualifier)) ;
+	}
+	
 	@SafeVarargs
 	static public <U> U getBean(Class<U> subtype, PropertyContext propertyContext, Class<? extends Annotation>... qualifiers) {
 		return getBean(subtype, propertyContext, AnnotationProxy.asAnnotations(qualifiers)) ;
@@ -95,6 +99,10 @@ public class RoxCDI {
 	static public <U> U getBean(Class<U> subtype) {
 		Instance<U> instance = getCDI().select((Class)subtype) ;
 		return instance != null ? instance.get() : null ;
+	}
+
+	static public <U> U getBean(Class<U> subtype, Class<? extends Annotation> qualifier) {
+		return getBean(subtype, AnnotationProxy.asAnnotation(qualifier)) ;
 	}
 
 	@SuppressWarnings({ "unchecked" })
