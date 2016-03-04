@@ -53,7 +53,10 @@ public class PropertyContext {
 	
 	static public PropertyContext getContext(PropertyContext defaultContext) {
 		PropertyContext currentContext = context.get() ;
-		return currentContext != null ? currentContext : defaultContext ;
+		
+		if (currentContext != null) return currentContext ;
+		
+		return defaultContext != null ? defaultContext : SYSTEM ;
 	}
 	
 	////////////////////////////////////////////////////////////
