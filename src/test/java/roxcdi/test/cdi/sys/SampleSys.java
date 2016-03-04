@@ -1,13 +1,11 @@
 package roxcdi.test.cdi.sys;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.junit.Assert;
 
 import roxcdi.parameter.cdi.PropertyInjection;
 
-@ApplicationScoped
 public class SampleSys {
 
 	@Inject
