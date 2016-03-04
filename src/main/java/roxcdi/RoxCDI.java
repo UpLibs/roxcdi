@@ -9,6 +9,7 @@ import javax.enterprise.inject.spi.CDI;
 
 import roxcdi.parameter.Property;
 import roxcdi.parameter.PropertyContext;
+import roxcdi.reflection.AnnotationProxy;
 
 public class RoxCDI {
 	
@@ -42,6 +43,11 @@ public class RoxCDI {
 		finally {
 			PropertyContext.unsetContext(propertyContext) ;
 		}
+	}
+	
+	@SafeVarargs
+	static public <U> U getBean(Class<U> subtype, PropertyContext propertyContext, Class<? extends Annotation>... qualifiers) {
+		return getBean(subtype, propertyContext, AnnotationProxy.asAnnotations(qualifiers)) ;
 	}
 	
 	static public <U> U getBean(Class<U> subtype, PropertyContext propertyContext, Annotation... qualifiers) {
@@ -90,7 +96,12 @@ public class RoxCDI {
 		Instance<U> instance = getCDI().select((Class)subtype) ;
 		return instance != null ? instance.get() : null ;
 	}
-	
+
+	@SuppressWarnings({ "unchecked" })
+	static public <U> U getBean(Class<U> subtype, Class<? extends Annotation>... qualifiers) {
+		return getBean(subtype, AnnotationProxy.asAnnotations(qualifiers)) ;
+	}
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	static public <U> U getBean(Class<U> subtype, Annotation... qualifiers) {
 		Instance<U> instance = getCDI().select((Class)subtype, qualifiers) ;
