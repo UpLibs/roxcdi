@@ -3,11 +3,19 @@ package roxcdi.test.cdi.sys;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.junit.Assert;
+
+import roxcdi.parameter.cdi.PropertyInjection;
+
 @ApplicationScoped
 public class SampleSys {
 
 	@Inject
 	private SampleCollection collection ;
+	
+	@Inject
+	@PropertyInjection( name = "roxcdi.test.property" , defaultValue = "nothing" , type = String.class )
+	private String testProperty ;
 	
 	public int getCollectionSize() {
 		return collection.size() ;
@@ -17,5 +25,8 @@ public class SampleSys {
 		return collection.get(idx) ;
 	}
 	
+	public void checkProperty(String expectedValue) {
+		Assert.assertEquals(expectedValue, testProperty) ;
+	}
 	
 }
