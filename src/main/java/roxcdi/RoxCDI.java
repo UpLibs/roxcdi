@@ -8,6 +8,7 @@ import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.CDI;
 
 import roxcdi.parameter.Property;
+import roxcdi.parameter.PropertyContext;
 
 public class RoxCDI {
 	
@@ -27,6 +28,62 @@ public class RoxCDI {
 	static public <T extends CDI<?>> T getCDI_IfInitialized() {
 		return roxCDI.getIfInitialized();
 	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	static public <U> U getBean(Class<U> subtype, PropertyContext propertyContext) {
+		PropertyContext.setContext(propertyContext) ;
+		
+		try {
+			U bean = getBean(subtype) ;
+			ensureConstructed(bean) ;
+			return bean ;	
+		}
+		finally {
+			PropertyContext.unsetContext(propertyContext) ;
+		}
+	}
+	
+	static public <U> U getBean(Class<U> subtype, PropertyContext propertyContext, Annotation... qualifiers) {
+		PropertyContext.setContext(propertyContext) ;
+		
+		try {
+			U bean = getBean(subtype, qualifiers) ;
+			ensureConstructed(bean) ;
+			return bean ;	
+		}
+		finally {
+			PropertyContext.unsetContext(propertyContext) ;
+		}
+	}
+	
+	static public <U> U getBean(Annotation subtype, PropertyContext propertyContext, Annotation qualifiers) {
+		PropertyContext.setContext(propertyContext) ;
+		
+		try {
+			U bean = getBean(subtype, qualifiers) ;
+			ensureConstructed(bean) ;
+			return bean ;	
+		}
+		finally {
+			PropertyContext.unsetContext(propertyContext) ;
+		}
+	}
+	
+	static public <U> U getBean(PropertyContext propertyContext, Annotation qualifiers) {
+		PropertyContext.setContext(propertyContext) ;
+		
+		try {
+			U bean = getBean(qualifiers) ;
+			ensureConstructed(bean) ;
+			return bean ;	
+		}
+		finally {
+			PropertyContext.unsetContext(propertyContext) ;
+		}
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	static public <U> U getBean(Class<U> subtype) {
@@ -51,6 +108,8 @@ public class RoxCDI {
 		Instance<U> instance = (Instance<U>) getCDI().select(qualifiers) ;
 		return instance != null ? instance.get() : null ;
 	}
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	static public <U> Instance<U> select(Class<U> subtype) {
