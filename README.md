@@ -3,15 +3,6 @@ RoxCDI
 
 Simple CDI Tools
 
-## TODO:
-
-- [x] Update README file
-- [ ] Add more unit test
-
-## Code status
-
-- [![Build Status](https://github.com/UpLibs/roxcdi)](https://github.com/UpLibs/roxcdi) *(master branch)*
-
 ## Requirements
 
 - JDK 1.8+
@@ -30,18 +21,6 @@ Simple CDI Tools
 
 ```
 ./gradlew clean test
-```
-
-## Generate Javadoc
-
-```
-./gradlew javaDoc
-```
-
-## Publish artifacts
-
-```
-./gradlew upload
 ```
 
 *Happy Coding!*
