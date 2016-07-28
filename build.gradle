@@ -9,7 +9,7 @@ version = "1.0"
 [compileJava, compileTestJava, javadoc]*.options*.encoding = 'UTF-8'
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '2.14'
+    gradleVersion = '2.14.1'
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {
@@ -34,7 +34,6 @@ repositories {
 
 dependencies {
 	
-	compile group: 'org.reflections', name: 'reflections', version: '0.9.10'
 	compile group: 'org.reflections', name: 'reflections', version: '0.9.10'
 	
     compile group: 'javax.inject', name: 'javax.inject', version: '1'
