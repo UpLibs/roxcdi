@@ -1,9 +1,11 @@
 package roxcdi ;
 
 import java.lang.annotation.Annotation;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import javax.enterprise.context.RequestScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.CDI;
 
@@ -17,8 +19,15 @@ public class RoxCDI {
 	private static final String WELD_CLASS_NAME = "org.jboss.weld.environment.se.Weld";
 	private static final String WELD_PACKAGE = "org.jboss.weld.";
 	
+	private static final String WELD_REQUEST_CONTEXT_CLASS = "org.jboss.weld.context.RequestContext";
+	
+	private static final String DELTASPIKE_CDICONTAINERLOADER_CLASS_NAME = "org.apache.deltaspike.cdise.api.CdiContainerLoader";
+	private static final String DELTASPIKE_CONTEXTCONTROL_CLASS_NAME = "org.apache.deltaspike.cdise.api.ContextControl";
+	private static final String DELTASPIKE_BEANPROVIDER_CLASS_NAME = "org.apache.deltaspike.core.api.provider.BeanProvider";
+	
 	final static public Property PROPERTY_CDI_INSTANTIATOR = Property.fromPackage("instantiator") ;
 	final static public Property PROPERTY_WELD_AUTOLOAD = Property.fromPackage("weld.autoload",Boolean.class).withDefault(true) ;
+	final static public Property PROPERTY_DELTASPIKE_AUTOLOAD = Property.fromPackage("deltaspike.autoload",Boolean.class).withDefault(true) ;
 	
 	final static private RoxCDI roxCDI = new RoxCDI() ;
 	
@@ -211,6 +220,19 @@ public class RoxCDI {
 		return cdiInstantiated ;
 	}
 	
+	static public enum InstantiatedCDI {
+		ALREADY_PRESENT,
+		INSTANTIATOR_CLASS,
+		DELTASPIKE,
+		WELD,
+	}
+	
+	private InstantiatedCDI instantiatedCDI = InstantiatedCDI.ALREADY_PRESENT ;
+	
+	public InstantiatedCDI getInstantiatedCDI() {
+		return instantiatedCDI;
+	}
+	
 	private CDI<?> instantiateCDI() {
 		
 		String instantiatorClassName = PROPERTY_CDI_INSTANTIATOR.get() ;
@@ -219,6 +241,9 @@ public class RoxCDI {
 			
 			try {
 				CDI<?> cdi = instantiateCDIWithClass(instantiatorClassName);
+				
+				instantiatedCDI = InstantiatedCDI.INSTANTIATOR_CLASS ;
+				
 				return cdi ;
 			}
 			catch (ClassNotFoundException e) {
@@ -229,14 +254,88 @@ public class RoxCDI {
 			}
 			
 		}
+		else if ( isDeltaSpikePresentAndAllowed() ) {
+			CDI<?> cdi = instantiateDeltaSpike() ;
+			
+			instantiatedCDI = InstantiatedCDI.DELTASPIKE;
+			
+			return cdi ;
+		}
 		else if ( isWeldPresentAndAllowed() ) {
 			CDI<?> cdi = instantiateWeld() ;
+			
+			instantiatedCDI = InstantiatedCDI.WELD;
+			
 			return cdi ;
 		}
 		
 		throw new UnsupportedOperationException("Can't automatically instantiate CDI. Shoud instantiate CDI before call any RoxCDI method! You also can autoload Weld (if present in classpath) using property <"+ PROPERTY_WELD_AUTOLOAD + "> or use RoxCDIInstantiator implementation at property <"+ PROPERTY_CDI_INSTANTIATOR +">");
 	}
+	
+	/////////////////////////////////////////////////
+	
+	private WeakReference<CDI<?>> deltaspikeInstantiatedCDIRef = null ;
+	
+	private CDI<?> instantiateDeltaSpike() {
+		try {
+			Class<?> dsClass = Class.forName(DELTASPIKE_CDICONTAINERLOADER_CLASS_NAME) ;
+			
+			try {
+				Method methodGetCdiContainer = dsClass.getMethod("getCdiContainer") ;
+				
+				Object cdiContainer = methodGetCdiContainer.invoke(null) ;
+				
+				Method methodBoot = cdiContainer.getClass().getMethod("boot") ;
+				
+				methodBoot.invoke(cdiContainer) ;	
+			}
+			catch (IllegalStateException e) {
+				if ( !e.getMessage().startsWith("WELD-ENV") ) {
+					throw new IllegalStateException("Can't boot DeltaSpike.", e) ;
+				}
+			}
+			
+			startDeltaSpikeContexts();
+			
+			CDI<Object> cdi = CDI.current() ;
+			if (cdi == null) return null ;
+			
+			deltaspikeInstantiatedCDIRef = new WeakReference<CDI<?>>(cdi) ;
+			
+			return cdi ;
+		}
+		catch (Exception e) {
+			e.printStackTrace(); 
+			return null ;
+		}
+	}
 
+	private boolean isDeltaSpikePresentAndAllowed() {
+		try {
+			Class<?> dsClass = Class.forName(DELTASPIKE_CDICONTAINERLOADER_CLASS_NAME) ;
+			
+			if (dsClass != null) {
+				try {
+					Boolean allow = PROPERTY_DELTASPIKE_AUTOLOAD.getBoolean();
+					return allow != null && allow ;
+				}
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+				
+				return false ;
+			}
+			
+			return false ;
+		}
+		catch (Exception e) {
+			return false ;
+		}
+	}
+
+	
+	/////////////////////////////////////////////////
+	
 	private CDI<?> instantiateWeld() {
 		try {
 			Class<?> weldClass = Class.forName(WELD_CLASS_NAME) ;
@@ -277,6 +376,8 @@ public class RoxCDI {
 		}
 	}
 
+	/////////////////////////////////////////////////////
+	
 	@SuppressWarnings("unchecked")
 	private CDI<?> instantiateCDIWithClass(String instantiatorClassName) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 		Class<RoxCDIInstantiator> instantiatorClass = (Class<RoxCDIInstantiator>) Class.forName(instantiatorClassName, true, RoxCDI.class.getClassLoader()) ;
@@ -384,16 +485,28 @@ public class RoxCDI {
 	static public boolean shutdown(CDI<?> cdi) {
 		if (cdi == null) return false ;
 	
-		if ( isWeldContainer(cdi) ) {
+		if ( roxCDI.isDeltaSpikeContainer(cdi)) {
+			return roxCDI.shutdownDeltaSpike(cdi) ;
+		}
+		else if ( roxCDI.isWeldContainer(cdi) ) {
+			return roxCDI.shutdownWeld(cdi) ;
+		}
+		else {
+			return roxCDI.shutdownGeneric(cdi) ;
+		}
+		
+	}
+	
+	private boolean shutdownDeltaSpike(CDI<?> cdi) {
+		if ( roxCDI.isWeldContainer(cdi) ) {
 			return shutdownWeld(cdi) ;
 		}
 		else {
 			return shutdownGeneric(cdi) ;
 		}
-		
 	}
 	
-	private static boolean shutdownWeld(CDI<?> cdi) {
+	private boolean shutdownWeld(CDI<?> cdi) {
 		
 		try {
 			Object ret = callMethod(cdi, "shutdown") ;
@@ -410,13 +523,18 @@ public class RoxCDI {
 		
 	}
 
-	private static boolean isWeldContainer(CDI<?> cdi) {
+	private boolean isDeltaSpikeContainer(CDI<?> cdi) {
+		WeakReference<CDI<?>> ref = deltaspikeInstantiatedCDIRef ;
+		CDI<?> deltaSpikeCDI = ref != null ? ref.get() : null ;
+		return cdi == deltaSpikeCDI ;
+	}
+	
+	private boolean isWeldContainer(CDI<?> cdi) {
 		String className = cdi.getClass().getName() ;
-		
 		return className.startsWith(WELD_PACKAGE) ;
 	}
 	
-	private static boolean shutdownGeneric(CDI<?> cdi) {
+	private boolean shutdownGeneric(CDI<?> cdi) {
 
 		try {
 			Exception error1 = null ;
@@ -468,6 +586,165 @@ public class RoxCDI {
 		
 		return Boolean.FALSE ;
 	}
+	
+	//////////////////////////////////////////////////////////////////
+	
+	static public void startContext( Class<? extends Annotation> contextType ) { 
+		
+		CDI<?> cdi = getCDI() ;
+		
+		if ( roxCDI.isDeltaSpikeContainer(cdi) ) {
+			roxCDI.startContextDeltaSpike(cdi, contextType) ;
+		}
+		else if ( roxCDI.isWeldContainer(cdi) ) {
+			roxCDI.startContextWeld(cdi, contextType);
+		}
+		else if ( roxCDI.isDeltaSpikePresentAndAllowed() ) {
+			roxCDI.startContextDeltaSpike(cdi, contextType) ;
+		}
+		
+	}
+	
+	static public void stopContext( Class<? extends Annotation> contextType ) {
+		CDI<?> cdi = getCDI() ;
+		
+		if ( roxCDI.isDeltaSpikeContainer(cdi) ) {
+			roxCDI.stopContextDeltaSpike(cdi, contextType) ;
+		}
+		else if ( roxCDI.isWeldContainer(cdi) ) {
+			roxCDI.stopContextWeld(cdi, contextType);
+		}
+		else if ( roxCDI.isDeltaSpikePresentAndAllowed() ) {
+			roxCDI.stopContextDeltaSpike(cdi, contextType) ;
+		}
+		
+	}
+	
+	//////////////////////////////////////////////////////////////////
+	
+	private Object getDeltaSpikeContextControl() {
+		
+		try {
+			Class<?> classbeanProvider = Class.forName(DELTASPIKE_BEANPROVIDER_CLASS_NAME) ;
+			
+			Method methodGetContextualReference = classbeanProvider.getMethod("getContextualReference", Class.class) ;
+			
+			Class<?> calssContextControl = Class.forName(DELTASPIKE_CONTEXTCONTROL_CLASS_NAME) ;
+			
+			Object contextControl = methodGetContextualReference.invoke(null, calssContextControl) ;
+			
+			return contextControl ;
+		}
+		catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+			throw new IllegalStateException(e) ;
+		}
+	}
+	
+	private void startDeltaSpikeContexts() {
+		
+		try {
+			Object contextControl = getDeltaSpikeContextControl() ;
+			Method methodStartContexts = contextControl.getClass().getMethod("startContexts") ;
+			
+			methodStartContexts.invoke(contextControl) ;
+		}
+		catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+			throw new IllegalStateException(e) ;
+		}
+		
+	}
+	
+	private void startContextDeltaSpike( CDI<?> cdi, Class<? extends Annotation> contextType ) {
+		
+		try {
+			Object contextControl = getDeltaSpikeContextControl() ;
+			Method methodStartContext = contextControl.getClass().getMethod("startContext", Class.class) ;
+			methodStartContext.invoke(contextControl, contextType) ;
+		}
+		catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+			throw new IllegalStateException(e) ;
+		}
+		
+	}
+		
+	private void stopContextDeltaSpike( CDI<?> cdi, Class<? extends Annotation> contextType ) {
+		
+		try {
+			Object contextControl = getDeltaSpikeContextControl() ;
+			Method methodStartContext = contextControl.getClass().getMethod("stopContext", Class.class) ;
+			methodStartContext.invoke(contextControl, contextType) ;
+		}
+		catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+			throw new IllegalStateException(e) ;
+		}
+		
+	}
+	
+	//////////////////////////////////////////////////////////////////	
+	
+	private Class<?> getWeldContextClass(Class<? extends Annotation> contextType) {
+		Class<?> contextClass ;
+		if ( contextType == RequestScoped.class ) {
+			try {
+				contextClass = Class.forName(WELD_REQUEST_CONTEXT_CLASS) ;
+			}
+			catch (ClassNotFoundException e) {
+				throw new IllegalStateException(e) ;
+			}	
+		}
+		else {
+			throw new UnsupportedOperationException("Can't find context class for type: "+ contextType) ;
+		}
+		return contextClass;
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void startContextWeld( CDI<?> cdi, Class<? extends Annotation> contextType ) {
+		
+		Class<?> contextClass = getWeldContextClass(contextType);
+		
+		Instance context = getCDI().select((Class)contextClass) ;
+		
+		try {
+			Method methodIsAlive = context.getClass().getMethod("isActive") ;
+			
+			Boolean alive = (Boolean) methodIsAlive.invoke(context) ;
+			
+			if (!alive) {
+				Method methodActivate = context.getClass().getMethod("activate") ;
+				methodActivate.invoke(context) ;
+			}
+		}
+		catch (NoSuchMethodException | SecurityException | InvocationTargetException | IllegalAccessException e) {
+			throw new IllegalStateException(e) ;
+		}
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private void stopContextWeld( CDI<?> cdi, Class<? extends Annotation> contextType ) {
+		
+		Class<?> contextClass = getWeldContextClass(contextType);
+		
+		Instance context = getCDI().select((Class)contextClass) ;
+		
+		try {
+			Method methodIsAlive = context.getClass().getMethod("isActive") ;
+			
+			Boolean alive = (Boolean) methodIsAlive.invoke(context) ;
+			
+			if (alive) {
+				Method methodInvalidate = context.getClass().getMethod("invalidate") ;
+				methodInvalidate.invoke(context) ;
+				
+				Method methodDeactivate = context.getClass().getMethod("deactivate") ;
+				methodDeactivate.invoke(context) ;
+			}
+		}
+		catch (NoSuchMethodException | SecurityException | InvocationTargetException | IllegalAccessException e) {
+			throw new IllegalStateException(e) ;
+		}
+	}
+	
 
 	
 }
