@@ -2,6 +2,7 @@ package roxcdi ;
 
 import java.lang.annotation.Annotation;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -20,6 +21,8 @@ public class RoxCDI {
 	private static final String WELD_PACKAGE = "org.jboss.weld.";
 	
 	private static final String WELD_REQUEST_CONTEXT_CLASS = "org.jboss.weld.context.RequestContext";
+	private static final String WELD_BOUNDLITERAL_CLASS = "org.jboss.weld.context.bound.BoundLiteral";
+
 	
 	private static final String DELTASPIKE_CDICONTAINERLOADER_CLASS_NAME = "org.apache.deltaspike.cdise.api.CdiContainerLoader";
 	private static final String DELTASPIKE_CONTEXTCONTROL_CLASS_NAME = "org.apache.deltaspike.cdise.api.ContextControl";
@@ -621,17 +624,19 @@ public class RoxCDI {
 	}
 	
 	//////////////////////////////////////////////////////////////////
-	
+
+	static final private Annotation[] dummyAnnotationArray = new Annotation[0] ;
+
 	private Object getDeltaSpikeContextControl() {
 		
 		try {
 			Class<?> classbeanProvider = Class.forName(DELTASPIKE_BEANPROVIDER_CLASS_NAME) ;
 			
-			Method methodGetContextualReference = classbeanProvider.getMethod("getContextualReference", Class.class) ;
+			Method methodGetContextualReference = classbeanProvider.getMethod("getContextualReference", Class.class, Annotation[].class) ;
 			
-			Class<?> calssContextControl = Class.forName(DELTASPIKE_CONTEXTCONTROL_CLASS_NAME) ;
+			Class<?> classContextControl = Class.forName(DELTASPIKE_CONTEXTCONTROL_CLASS_NAME) ;
 			
-			Object contextControl = methodGetContextualReference.invoke(null, calssContextControl) ;
+			Object contextControl = methodGetContextualReference.invoke(null, classContextControl, dummyAnnotationArray) ;
 			
 			return contextControl ;
 		}
@@ -698,45 +703,64 @@ public class RoxCDI {
 		return contextClass;
 	}
 
+	private Object getWeldContext(CDI<?> cdi, Class<? extends Annotation> contextType) {
+		Class<?> contextClass = getWeldContextClass(contextType);
+
+		try {
+			Class< ? > boundLiteralClass = Class.forName( WELD_BOUNDLITERAL_CLASS );
+
+			Field field = boundLiteralClass.getField( "INSTANCE" );
+
+			Annotation boundLiteral = (Annotation) field.get(null);
+
+			Instance context = cdi.select((Class)contextClass, boundLiteral ) ;
+
+			return context != null ? context.get() : null ;
+		}
+		catch ( NoSuchFieldException | ClassNotFoundException | SecurityException | IllegalAccessException e) {
+			throw new IllegalStateException(e) ;
+		}
+
+	}
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void startContextWeld( CDI<?> cdi, Class<? extends Annotation> contextType ) {
-		
-		Class<?> contextClass = getWeldContextClass(contextType);
-		
-		Instance context = getCDI().select((Class)contextClass) ;
-		
 		try {
-			Method methodIsAlive = context.getClass().getMethod("isActive") ;
+			Object context = getWeldContext(cdi, contextType) ;
+
+			Class<?> contextClass = getWeldContextClass(contextType);
+
+			Method methodIsAlive = contextClass.getMethod("isActive") ;
 			
 			Boolean alive = (Boolean) methodIsAlive.invoke(context) ;
 			
 			if (!alive) {
-				Method methodActivate = context.getClass().getMethod("activate") ;
+				Method methodActivate = contextClass.getMethod("activate") ;
 				methodActivate.invoke(context) ;
 			}
 		}
-		catch (NoSuchMethodException | SecurityException | InvocationTargetException | IllegalAccessException e) {
+		catch ( NoSuchMethodException | SecurityException | InvocationTargetException | IllegalAccessException e) {
 			throw new IllegalStateException(e) ;
 		}
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void stopContextWeld( CDI<?> cdi, Class<? extends Annotation> contextType ) {
-		
-		Class<?> contextClass = getWeldContextClass(contextType);
-		
-		Instance context = getCDI().select((Class)contextClass) ;
-		
+
 		try {
-			Method methodIsAlive = context.getClass().getMethod("isActive") ;
-			
+			Object context = getWeldContext(cdi, contextType) ;
+
+			Class<?> contextClass = getWeldContextClass(contextType);
+
+			Method methodIsAlive = contextClass.getMethod("isActive") ;
+
 			Boolean alive = (Boolean) methodIsAlive.invoke(context) ;
-			
+
 			if (alive) {
-				Method methodInvalidate = context.getClass().getMethod("invalidate") ;
+				Method methodInvalidate = contextClass.getMethod("invalidate") ;
 				methodInvalidate.invoke(context) ;
 				
-				Method methodDeactivate = context.getClass().getMethod("deactivate") ;
+				Method methodDeactivate = contextClass.getMethod("deactivate") ;
 				methodDeactivate.invoke(context) ;
 			}
 		}
