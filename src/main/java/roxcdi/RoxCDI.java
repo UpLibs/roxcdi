@@ -5,8 +5,12 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.ConversationScoped;
 import javax.enterprise.context.RequestScoped;
+import javax.enterprise.context.SessionScoped;
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.CDI;
 
@@ -21,6 +25,10 @@ public class RoxCDI {
 	private static final String WELD_PACKAGE = "org.jboss.weld.";
 	
 	private static final String WELD_REQUEST_CONTEXT_CLASS = "org.jboss.weld.context.RequestContext";
+	private static final String WELD_SESSION_CONTEXT_CLASS = "org.jboss.weld.context.SessionContext";
+	private static final String WELD_APPLICATION_CONTEXT_CLASS = "org.jboss.weld.context.ApplicationContext";
+	private static final String WELD_CONVERSATION_CONTEXT_CLASS = "org.jboss.weld.context.ConversationContext";
+	
 	private static final String WELD_BOUNDLITERAL_CLASS = "org.jboss.weld.context.bound.BoundLiteral";
 
 	
@@ -313,7 +321,13 @@ public class RoxCDI {
 		}
 	}
 
+	private Boolean isDeltaSpikePresentAndAllowed ;
 	private boolean isDeltaSpikePresentAndAllowed() {
+		if (isDeltaSpikePresentAndAllowed == null) isDeltaSpikePresentAndAllowed = isDeltaSpikePresentAndAllowedImplem() ; 
+		return isDeltaSpikePresentAndAllowed ;
+	}
+
+	private boolean isDeltaSpikePresentAndAllowedImplem() {
 		try {
 			Class<?> dsClass = Class.forName(DELTASPIKE_CDICONTAINERLOADER_CLASS_NAME) ;
 			
@@ -356,7 +370,13 @@ public class RoxCDI {
 		}
 	}
 
+	private Boolean isWeldPresentAndAllowed ;
 	private boolean isWeldPresentAndAllowed() {
+		if (isWeldPresentAndAllowed == null) isWeldPresentAndAllowed = isWeldPresentAndAllowedImplem() ;
+		return isWeldPresentAndAllowed ;
+	}
+	
+	private boolean isWeldPresentAndAllowedImplem() {
 		try {
 			Class<?> weldClass = Class.forName(WELD_CLASS_NAME) ;
 			
@@ -625,35 +645,102 @@ public class RoxCDI {
 	
 	//////////////////////////////////////////////////////////////////
 
+	private Method deltaSpikeMethodGetContextualReference ;
+	private Method getDeltaSpikeMethodGetContextualReference() {
+		if (deltaSpikeMethodGetContextualReference == null) {
+			try {
+				Class<?> classbeanProvider = Class.forName(DELTASPIKE_BEANPROVIDER_CLASS_NAME) ;
+				deltaSpikeMethodGetContextualReference = classbeanProvider.getMethod("getContextualReference", Class.class, Annotation[].class) ;
+			}
+			catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalArgumentException e) {
+				throw new IllegalStateException(e) ;
+			}	
+		}
+		return deltaSpikeMethodGetContextualReference ;
+	}
+	
+	private Class<?> deltaSpikeClassContextControl ;
+	private Class<?> getDeltaSpikeClassContextControl() {
+		if (deltaSpikeClassContextControl == null) {
+			try {
+				deltaSpikeClassContextControl = Class.forName(DELTASPIKE_CONTEXTCONTROL_CLASS_NAME) ;
+			}
+			catch (ClassNotFoundException e) {
+				throw new IllegalStateException(e) ;
+			}
+		}
+		return deltaSpikeClassContextControl ;
+	}
+	
 	static final private Annotation[] dummyAnnotationArray = new Annotation[0] ;
 
 	private Object getDeltaSpikeContextControl() {
 		
 		try {
-			Class<?> classbeanProvider = Class.forName(DELTASPIKE_BEANPROVIDER_CLASS_NAME) ;
-			
-			Method methodGetContextualReference = classbeanProvider.getMethod("getContextualReference", Class.class, Annotation[].class) ;
-			
-			Class<?> classContextControl = Class.forName(DELTASPIKE_CONTEXTCONTROL_CLASS_NAME) ;
+			Method methodGetContextualReference = getDeltaSpikeMethodGetContextualReference() ;
+			Class<?> classContextControl = getDeltaSpikeClassContextControl();
 			
 			Object contextControl = methodGetContextualReference.invoke(null, classContextControl, dummyAnnotationArray) ;
 			
 			return contextControl ;
 		}
-		catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+		catch (SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			throw new IllegalStateException(e) ;
 		}
+	}
+	
+	private Method methodDeltaSpikeContextControlStartContexts ;
+	private Method methodDeltaSpikeContextControlStartContext ;
+	private Method methodDeltaSpikeContextControlStopContext ;
+	
+	private Method getMethodDeltaSpikeContextControlStartContexts() {
+		if (methodDeltaSpikeContextControlStartContexts == null) {
+			try {
+				Object contextControl = getDeltaSpikeContextControl() ;
+				methodDeltaSpikeContextControlStartContexts = contextControl.getClass().getMethod("startContexts") ;
+			}
+			catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
+				throw new IllegalStateException(e) ;
+			} 
+		}
+		return methodDeltaSpikeContextControlStartContexts ;
+	}
+	
+	private Method getMethodDeltaSpikeContextControlStartContext() {
+		if (methodDeltaSpikeContextControlStartContext == null) {
+			try {
+				Object contextControl = getDeltaSpikeContextControl() ;
+				methodDeltaSpikeContextControlStartContext = contextControl.getClass().getMethod("startContext") ;
+			}
+			catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
+				throw new IllegalStateException(e) ;
+			}
+		}
+		return methodDeltaSpikeContextControlStartContext ;
+	}
+	
+	private Method getMethodDeltaSpikeContextControlStopContext() {
+		if (methodDeltaSpikeContextControlStopContext == null) {
+			try {
+				Object contextControl = getDeltaSpikeContextControl() ;
+				methodDeltaSpikeContextControlStopContext = contextControl.getClass().getMethod("stopContext") ;
+			}
+			catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
+				throw new IllegalStateException(e) ;
+			}
+		}
+		return methodDeltaSpikeContextControlStopContext ;
 	}
 	
 	private void startDeltaSpikeContexts() {
 		
 		try {
 			Object contextControl = getDeltaSpikeContextControl() ;
-			Method methodStartContexts = contextControl.getClass().getMethod("startContexts") ;
+			Method methodStartContexts = getMethodDeltaSpikeContextControlStartContexts();
 			
 			methodStartContexts.invoke(contextControl) ;
 		}
-		catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+		catch (SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			throw new IllegalStateException(e) ;
 		}
 		
@@ -663,10 +750,10 @@ public class RoxCDI {
 		
 		try {
 			Object contextControl = getDeltaSpikeContextControl() ;
-			Method methodStartContext = contextControl.getClass().getMethod("startContext", Class.class) ;
+			Method methodStartContext = getMethodDeltaSpikeContextControlStartContext();
 			methodStartContext.invoke(contextControl, contextType) ;
 		}
-		catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+		catch (SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			throw new IllegalStateException(e) ;
 		}
 		
@@ -676,10 +763,10 @@ public class RoxCDI {
 		
 		try {
 			Object contextControl = getDeltaSpikeContextControl() ;
-			Method methodStartContext = contextControl.getClass().getMethod("stopContext", Class.class) ;
+			Method methodStartContext = getMethodDeltaSpikeContextControlStopContext();
 			methodStartContext.invoke(contextControl, contextType) ;
 		}
-		catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+		catch (SecurityException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			throw new IllegalStateException(e) ;
 		}
 		
@@ -687,84 +774,182 @@ public class RoxCDI {
 	
 	//////////////////////////////////////////////////////////////////	
 	
+	private HashMap<Class<?>, Class<?>> weldContextClass = new HashMap<>() ;
 	private Class<?> getWeldContextClass(Class<? extends Annotation> contextType) {
 		Class<?> contextClass ;
-		if ( contextType == RequestScoped.class ) {
-			try {
-				contextClass = Class.forName(WELD_REQUEST_CONTEXT_CLASS) ;
+		synchronized (weldContextClass) {
+			contextClass = weldContextClass.get(contextType) ;
+			
+			if (contextClass == null) {
+				try {
+					if ( contextType == RequestScoped.class ) {
+						contextClass = Class.forName(WELD_REQUEST_CONTEXT_CLASS) ;
+					}
+					else if ( contextType == ApplicationScoped.class ) {
+						contextClass = Class.forName(WELD_APPLICATION_CONTEXT_CLASS) ;
+					}
+					else if ( contextType == SessionScoped.class ) {
+						contextClass = Class.forName(WELD_SESSION_CONTEXT_CLASS) ;
+					}
+					else if ( contextType == ConversationScoped.class ) {
+						contextClass = Class.forName(WELD_CONVERSATION_CONTEXT_CLASS) ;
+					}
+					else {
+						throw new UnsupportedOperationException("Can't find context class for type: "+ contextType) ;
+					}
+				}
+				catch (ClassNotFoundException e) {
+					throw new IllegalStateException(e) ;
+				}
+				
+				if (contextClass != null) weldContextClass.put(contextType, contextClass) ;
 			}
-			catch (ClassNotFoundException e) {
+			
+			return contextClass ;
+		}
+		
+
+	}
+
+	private Annotation weldBoundLiteralAnnotation ;
+	private Annotation getWeldBoundLiteralAnnotation() {
+		if (weldBoundLiteralAnnotation == null) {
+			try {
+				Class< ? > boundLiteralClass = Class.forName( WELD_BOUNDLITERAL_CLASS );
+				Field field = boundLiteralClass.getField( "INSTANCE" );
+				Annotation boundLiteral = (Annotation) field.get(null);
+				
+				weldBoundLiteralAnnotation = boundLiteral ;
+			}
+			catch ( NoSuchFieldException | ClassNotFoundException | SecurityException | IllegalAccessException e) {
 				throw new IllegalStateException(e) ;
-			}	
+			}
 		}
-		else {
-			throw new UnsupportedOperationException("Can't find context class for type: "+ contextType) ;
+		
+		return weldBoundLiteralAnnotation ;
+	}
+	
+	private Object getWeldContext(CDI<?> cdi, Class<?> contextClass) {
+		Annotation boundLiteral = getWeldBoundLiteralAnnotation();
+		
+		@SuppressWarnings({ "unchecked", "rawtypes" })
+		Instance<Object> context = cdi.select((Class)contextClass, boundLiteral) ;
+		
+		return context != null ? context.get() : null ;		
+	}
+	
+	private HashMap<Class<?>, Method> weldContextMethodIsAlive = new HashMap<>() ;
+	private Method getWeldContextMethodIsAlive(Class<?> contextClass) {
+		synchronized (weldContextMethodIsAlive) {
+			Method method = weldContextMethodIsAlive.get(contextClass) ;
+			
+			if (method == null) {
+				try {
+					method = contextClass.getMethod("isActive") ;
+					weldContextMethodIsAlive.put(contextClass, method) ;
+				}
+				catch (Exception e) {
+					throw new IllegalStateException(e) ;
+				}
+			}
+			
+			return method ;
 		}
-		return contextClass;
+	}
+	
+	private HashMap<Class<?>, Method> weldContextMethodActivate = new HashMap<>() ;
+	private Method getWeldContextMethodActivate(Class<?> contextClass) {
+		synchronized (weldContextMethodActivate) {
+			Method method = weldContextMethodActivate.get(contextClass) ;
+			
+			if (method == null) {
+				try {
+					method = contextClass.getMethod("activate") ;
+					weldContextMethodActivate.put(contextClass, method) ;
+				}
+				catch (Exception e) {
+					throw new IllegalStateException(e) ;
+				}
+			}
+			
+			return method ;
+		}
+	}
+	
+	private HashMap<Class<?>, Method> weldContextMethodDeactivate = new HashMap<>() ;
+	private Method getWeldContextMethodDeactivate(Class<?> contextClass) {
+		synchronized (weldContextMethodDeactivate) {
+			Method method = weldContextMethodDeactivate.get(contextClass) ;
+			
+			if (method == null) {
+				try {
+					method = contextClass.getMethod("deactivate") ;
+					weldContextMethodDeactivate.put(contextClass, method) ;
+				}
+				catch (Exception e) {
+					throw new IllegalStateException(e) ;
+				}
+			}
+			
+			return method ;
+		}
+	}
+	
+	private HashMap<Class<?>, Method> weldContextMethodInvalidate = new HashMap<>() ;
+	private Method getWeldContextMethodInvalidate(Class<?> contextClass) {
+		synchronized (weldContextMethodInvalidate) {
+			Method method = weldContextMethodInvalidate.get(contextClass) ;
+			
+			if (method == null) {
+				try {
+					method = contextClass.getMethod("invalidate") ;
+					weldContextMethodInvalidate.put(contextClass, method) ;
+				}
+				catch (Exception e) {
+					throw new IllegalStateException(e) ;
+				}
+			}
+			
+			return method ;
+		}
 	}
 
-	private Object getWeldContext(CDI<?> cdi, Class<? extends Annotation> contextType) {
-		Class<?> contextClass = getWeldContextClass(contextType);
-
-		try {
-			Class< ? > boundLiteralClass = Class.forName( WELD_BOUNDLITERAL_CLASS );
-
-			Field field = boundLiteralClass.getField( "INSTANCE" );
-
-			Annotation boundLiteral = (Annotation) field.get(null);
-
-			Instance context = cdi.select((Class)contextClass, boundLiteral ) ;
-
-			return context != null ? context.get() : null ;
-		}
-		catch ( NoSuchFieldException | ClassNotFoundException | SecurityException | IllegalAccessException e) {
-			throw new IllegalStateException(e) ;
-		}
-
-	}
-
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void startContextWeld( CDI<?> cdi, Class<? extends Annotation> contextType ) {
 		try {
-			Object context = getWeldContext(cdi, contextType) ;
-
 			Class<?> contextClass = getWeldContextClass(contextType);
-
-			Method methodIsAlive = contextClass.getMethod("isActive") ;
+			Object context = getWeldContext(cdi, contextClass) ;
 			
+			Method methodIsAlive = getWeldContextMethodIsAlive(contextClass) ;
 			Boolean alive = (Boolean) methodIsAlive.invoke(context) ;
 			
 			if (!alive) {
-				Method methodActivate = contextClass.getMethod("activate") ;
+				Method methodActivate = getWeldContextMethodActivate(contextClass);
 				methodActivate.invoke(context) ;
 			}
 		}
-		catch ( NoSuchMethodException | SecurityException | InvocationTargetException | IllegalAccessException e) {
+		catch ( SecurityException | InvocationTargetException | IllegalAccessException e) {
 			throw new IllegalStateException(e) ;
 		}
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void stopContextWeld( CDI<?> cdi, Class<? extends Annotation> contextType ) {
 
 		try {
-			Object context = getWeldContext(cdi, contextType) ;
-
 			Class<?> contextClass = getWeldContextClass(contextType);
-
-			Method methodIsAlive = contextClass.getMethod("isActive") ;
-
+			Object context = getWeldContext(cdi, contextClass) ;
+			
+			Method methodIsAlive = getWeldContextMethodIsAlive(contextClass) ;
 			Boolean alive = (Boolean) methodIsAlive.invoke(context) ;
 
 			if (alive) {
-				Method methodInvalidate = contextClass.getMethod("invalidate") ;
+				Method methodInvalidate = getWeldContextMethodInvalidate(contextClass);
 				methodInvalidate.invoke(context) ;
 				
-				Method methodDeactivate = contextClass.getMethod("deactivate") ;
+				Method methodDeactivate = getWeldContextMethodDeactivate(contextClass);
 				methodDeactivate.invoke(context) ;
 			}
 		}
-		catch (NoSuchMethodException | SecurityException | InvocationTargetException | IllegalAccessException e) {
+		catch (SecurityException | InvocationTargetException | IllegalAccessException e) {
 			throw new IllegalStateException(e) ;
 		}
 	}
