@@ -177,7 +177,7 @@ final public class DeltaSpikeProvider extends CDIProvider {
 		if (methodDeltaSpikeContextControlStartContext == null) {
 			try {
 				Object contextControl = getDeltaSpikeContextControl() ;
-				methodDeltaSpikeContextControlStartContext = contextControl.getClass().getMethod("startContext") ;
+				methodDeltaSpikeContextControlStartContext = contextControl.getClass().getMethod("startContext", Class.class) ;
 			}
 			catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
 				throw new IllegalStateException(e) ;
@@ -190,7 +190,7 @@ final public class DeltaSpikeProvider extends CDIProvider {
 		if (methodDeltaSpikeContextControlStopContext == null) {
 			try {
 				Object contextControl = getDeltaSpikeContextControl() ;
-				methodDeltaSpikeContextControlStopContext = contextControl.getClass().getMethod("stopContext") ;
+				methodDeltaSpikeContextControlStopContext = contextControl.getClass().getMethod("stopContext", Class.class) ;
 			}
 			catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
 				throw new IllegalStateException(e) ;

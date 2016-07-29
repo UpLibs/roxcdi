@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.WeakHashMap;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -121,16 +122,16 @@ final public class WeldProvider extends CDIProvider {
 			
 			if (contextClass == null) {
 				try {
-					if ( contextType == RequestScoped.class ) {
+					if ( contextType.isAssignableFrom( RequestScoped.class ) ) {
 						contextClass = Class.forName(WELD_REQUEST_CONTEXT_CLASS) ;
 					}
-					else if ( contextType == ApplicationScoped.class ) {
+					else if ( contextType.isAssignableFrom( ApplicationScoped.class ) ) {
 						contextClass = Class.forName(WELD_APPLICATION_CONTEXT_CLASS) ;
 					}
-					else if ( contextType == SessionScoped.class ) {
+					else if ( contextType.isAssignableFrom( SessionScoped.class ) ) {
 						contextClass = Class.forName(WELD_SESSION_CONTEXT_CLASS) ;
 					}
-					else if ( contextType == ConversationScoped.class ) {
+					else if ( contextType.isAssignableFrom( ConversationScoped.class ) ) {
 						contextClass = Class.forName(WELD_CONVERSATION_CONTEXT_CLASS) ;
 					}
 					else {
@@ -215,6 +216,64 @@ final public class WeldProvider extends CDIProvider {
 		}
 	}
 	
+	private HashMap<Class<?>, Method> weldContextMethodAssociate = new HashMap<>() ;
+	private Method getWeldContextMethodAssociate(Class<?> contextClass) {
+		synchronized (weldContextMethodAssociate) {
+			Method method = weldContextMethodAssociate.get(contextClass) ;
+			
+			if (method == null) {
+				try {
+					Method[] methods = contextClass.getMethods() ;
+					
+					for (Method m : methods) {
+						if ( m.getName().equals("associate") && m.getParameterCount() == 1 ) {
+							method = m ;
+							break ;
+						}
+					}
+					
+					if (method == null) throw new NoSuchMethodException("Can't find method associate(?) for class "+ contextClass) ;
+					
+					weldContextMethodAssociate.put(contextClass, method) ;
+				}
+				catch (Exception e) {
+					throw new IllegalStateException(e) ;
+				}
+			}
+			
+			return method ;
+		}
+	}
+	
+	private HashMap<Class<?>, Method> weldContextMethodDissociate = new HashMap<>() ;
+	private Method getWeldContextMethodDissociate(Class<?> contextClass) {
+		synchronized (weldContextMethodDissociate) {
+			Method method = weldContextMethodDissociate.get(contextClass) ;
+			
+			if (method == null) {
+				try {
+					Method[] methods = contextClass.getMethods() ;
+					
+					for (Method m : methods) {
+						if ( m.getName().equals("dissociate") && m.getParameterCount() == 1 ) {
+							method = m ;
+							break ;
+						}
+					}
+					
+					if (method == null) throw new NoSuchMethodException("Can't find method dissociate(?) for class "+ contextClass) ;
+					
+					weldContextMethodDissociate.put(contextClass, method) ;
+				}
+				catch (Exception e) {
+					throw new IllegalStateException(e) ;
+				}
+			}
+			
+			return method ;
+		}
+	}
+	
 	private HashMap<Class<?>, Method> weldContextMethodDeactivate = new HashMap<>() ;
 	private Method getWeldContextMethodDeactivate(Class<?> contextClass) {
 		synchronized (weldContextMethodDeactivate) {
@@ -260,6 +319,8 @@ final public class WeldProvider extends CDIProvider {
 		startContext(ApplicationScoped.class);
 		startContext(RequestScoped.class);
 	}
+	
+	private static ThreadLocal<Map<String, Object>> sessionMaps = new ThreadLocal<Map<String, Object>>();
 
 	public void startContext( Class<? extends Annotation> contextType ) {
 		try {
@@ -270,6 +331,15 @@ final public class WeldProvider extends CDIProvider {
 			Boolean alive = (Boolean) methodIsAlive.invoke(context) ;
 			
 			if (!alive) {
+				Map<String, Object> map = sessionMaps.get() ;
+				if (map == null) {
+					map = new HashMap<>() ;
+					sessionMaps.set(map);
+				}
+				
+				Method methodAssociate = getWeldContextMethodAssociate(context.getClass()) ;
+				methodAssociate.invoke(context, map) ;
+				
 				Method methodActivate = getWeldContextMethodActivate(contextClass);
 				methodActivate.invoke(context) ;
 			}
@@ -294,6 +364,15 @@ final public class WeldProvider extends CDIProvider {
 				
 				Method methodDeactivate = getWeldContextMethodDeactivate(contextClass);
 				methodDeactivate.invoke(context) ;
+				
+				Map<String, Object> map = sessionMaps.get() ;
+				
+				if (map != null) {
+					Method methodDissociate = getWeldContextMethodDissociate(context.getClass()) ;
+					methodDissociate.invoke(context, map) ;
+					
+					sessionMaps.remove();
+				}
 			}
 		}
 		catch (SecurityException | InvocationTargetException | IllegalAccessException e) {
