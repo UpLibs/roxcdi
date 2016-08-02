@@ -22,6 +22,10 @@ final public class DeltaSpikeProvider extends CDIProvider {
 	static final private WeakHashMap<CDI<?>, DeltaSpikeProvider> instantiatedCDIs = new WeakHashMap<>() ;
 	
 	static public CDI<?> instantiateCDI() {
+		return instantiateCDI(false) ;
+	}
+	
+	static public CDI<?> instantiateCDI(boolean throwsException) {
 		try {
 			Class<?> dsClass = Class.forName(DELTASPIKE_CDICONTAINERLOADER_CLASS_NAME) ;
 			
@@ -53,8 +57,13 @@ final public class DeltaSpikeProvider extends CDIProvider {
 			
 			return cdi ;
 		}
+		catch (RuntimeException e) {
+			if (throwsException) throw e ;
+			return null ;
+		}
 		catch (Exception e) {
-			e.printStackTrace(); 
+			if (throwsException) throw new IllegalStateException(e) ;
+			else e.printStackTrace(); 
 			return null ;
 		}
 	}
@@ -77,6 +86,10 @@ final public class DeltaSpikeProvider extends CDIProvider {
 	static public boolean isDeltaSpikePresentAndAllowed() {
 		if (isDeltaSpikePresentAndAllowed == null) isDeltaSpikePresentAndAllowed = isDeltaSpikePresentAndAllowedImplem() ; 
 		return isDeltaSpikePresentAndAllowed ;
+	}
+	
+	static public void disableDeltaSpike() {
+		isDeltaSpikePresentAndAllowed = false ;
 	}
 
 	static private boolean isDeltaSpikePresentAndAllowedImplem() {

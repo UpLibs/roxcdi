@@ -1,6 +1,7 @@
 package roxcdi ;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.CDI;
@@ -243,18 +244,75 @@ final public class RoxCDI {
 			}
 			
 		}
-		else if ( DeltaSpikeProvider.isDeltaSpikePresentAndAllowed() ) {
-			CDI<?> cdi = DeltaSpikeProvider.instantiateCDI() ;
-			instantiatedCDI = InstantiatedCDIMethod.DELTASPIKE;
-			return cdi ;
+		
+		if ( DeltaSpikeProvider.isDeltaSpikePresentAndAllowed() ) {
+			try {
+				CDI<?> cdi = DeltaSpikeProvider.instantiateCDI(true) ;
+				if (cdi == null) throw new IllegalStateException("Can't instantiate CDI with DeltaSpike") ;
+				
+				instantiatedCDI = InstantiatedCDIMethod.DELTASPIKE;
+				return cdi ;
+			}
+			catch (Exception e) {
+				Throwable excep = normalizeThrowable(e) ;
+				String msg = excep.getMessage() ;
+				if (excep.getCause() != null) {
+					Throwable cause = excep.getCause() ;
+					msg += " | Cause: "+ cause + ( cause.getMessage() != null ? cause.getMessage() : "" ) ;
+				}
+				 
+				System.err.println("** Can't instantiate CDI with DeltaSpike: "+ msg) ;
+				
+				DeltaSpikeProvider.disableDeltaSpike();
+			}
 		}
-		else if ( WeldProvider.isWeldPresentAndAllowed() ) {
+		
+		if ( WeldProvider.isWeldPresentAndAllowed() ) {
 			CDI<?> cdi = WeldProvider.instantiateCDI();
+			if (cdi == null) throw new IllegalStateException("Can't instantiate CDI with Weld") ;
+			
 			instantiatedCDI = InstantiatedCDIMethod.WELD;
 			return cdi ;
 		}
 		
 		throw new UnsupportedOperationException("Can't automatically instantiate CDI. Shoud instantiate CDI before call any RoxCDI method! You also can autoload Weld (if present in classpath) using property <"+ PROPERTY_WELD_AUTOLOAD + "> or use RoxCDIInstantiator implementation at property <"+ PROPERTY_CDI_INSTANTIATOR +">");
+	}
+	
+	static private Throwable normalizeThrowable(Throwable e) {
+		while (true) {
+			if ( e instanceof InvocationTargetException ) {
+				Throwable cause = e.getCause() ;
+				if (cause == null) {
+					break ;
+				}
+				else {
+					e = cause ;
+					continue ;
+				}
+			}
+			else if ( e instanceof IllegalStateException ) {
+				String msg = e.getMessage() ;
+				if (msg == null || msg.isEmpty() || msg.equals("java.lang.reflect.InvocationTargetException") ) {
+					Throwable cause = e.getCause() ;
+					if (cause == null) {
+						break ;
+					}
+					else {
+						e = cause ;
+						continue ;
+					}	
+				}
+				else {
+					break ;
+				}
+			}
+			else {
+				break ;	
+			}
+			
+		}
+		
+		return e ; 
 	}
 
 	/////////////////////////////////////////////////////
