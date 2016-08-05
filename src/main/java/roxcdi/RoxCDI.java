@@ -385,9 +385,12 @@ final public class RoxCDI {
 		
 	}
 	
-	static public void stopContext( Class<? extends Annotation> contextType ) {
+	static public boolean stopContext( Class<? extends Annotation> contextType ) {
 
-		CDI<?> cdi = getCDI() ;
+		// Avoid to create CDI container while JVM is in shutdown process.
+		CDI<?> cdi = getCDI_IfInitialized() ;
+		
+		if (cdi == null) return false ;
 		
 		if ( DeltaSpikeProvider.isDeltaSpikeContainer(cdi) ) {
 			DeltaSpikeProvider.instance(cdi).stopContext(contextType);
@@ -399,6 +402,7 @@ final public class RoxCDI {
 			DeltaSpikeProvider.instance(cdi).stopContext(contextType);
 		}
 		
+		return true ;
 	}
 		
 }
