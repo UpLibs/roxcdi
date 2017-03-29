@@ -30,6 +30,10 @@ final public class RoxCDI {
 		return roxCDI.getIfInitialized();
 	}
 	
+	static public boolean isCDIInitialized() {
+		return roxCDI.isInitialized() ;
+	}
+	
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	static public <U> U getBean(Class<U> subtype, PropertyContext propertyContext) {
@@ -197,6 +201,10 @@ final public class RoxCDI {
 		else {
 			return null ;	
 		}
+	}
+	
+	public boolean isInitialized() {
+		return getIfInitialized() != null ; 
 	}
 	
 	private CDI<?> cdiInstantiated = null ;
