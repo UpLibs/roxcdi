@@ -6,16 +6,21 @@ abstract public class RunnableSessionScoped implements Runnable {
 
 	@Override
 	final public void run() {
-		RoxCDI.startContextRequestScoped() ;
+		defineSession();
+		
+		RoxCDI.startContextSessionScoped();
 		
 		try {
-			runRequestScoped();
+			runSessionScoped();
 		}
 		finally {
-			RoxCDI.stopContextRequestScoped() ;
+			RoxCDI.stopContextSessionScoped();
 		}
 	}
 	
-	abstract public void runRequestScoped() ;
+
+	public void defineSession() {}
+	
+	abstract public void runSessionScoped() ;
 
 }
