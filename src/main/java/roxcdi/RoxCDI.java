@@ -8,6 +8,7 @@ import javax.enterprise.inject.spi.CDI;
 
 import roxcdi.parameter.Property;
 import roxcdi.parameter.PropertyContext;
+import roxcdi.provider.CDIProvider;
 import roxcdi.provider.DeltaSpikeProvider;
 import roxcdi.provider.GenericProvider;
 import roxcdi.provider.WeldProvider;
@@ -368,41 +369,95 @@ final public class RoxCDI {
 	}
 
 	//////////////////////////////////////////////////////////////////
-	
-	static public void startContext( Class<? extends Annotation> contextType ) { 
-		
-		CDI<?> cdi = getCDI() ;
+
+	private static CDIProvider getCDIProvider() {
+		// Avoid to create CDI container while JVM is in shutdown process.
+		CDI<?> cdi = getCDI_IfInitialized() ;
+		if (cdi == null) return null ;
 		
 		if ( DeltaSpikeProvider.isDeltaSpikeContainer(cdi) ) {
-			DeltaSpikeProvider.instance(cdi).startContext(contextType);
+			return DeltaSpikeProvider.instance(cdi) ;
 		}
 		else if ( WeldProvider.isWeldContainer(cdi) ) { 
-			WeldProvider.instance(cdi).startContext(contextType);
+			return WeldProvider.instance(cdi) ;
 		}
 		else if ( DeltaSpikeProvider.isDeltaSpikePresentAndAllowed() ) {
-			DeltaSpikeProvider.instance(cdi).startContext(contextType);
+			return DeltaSpikeProvider.instance(cdi) ;
 		}
 		
+		return null ;
+	}
+	
+	static public boolean startContext( Class<? extends Annotation> contextType ) { 
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
+		
+		provider.startContext(contextType) ;
+		return true ;
 	}
 	
 	static public boolean stopContext( Class<? extends Annotation> contextType ) {
-
-		// Avoid to create CDI container while JVM is in shutdown process.
-		CDI<?> cdi = getCDI_IfInitialized() ;
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
 		
-		if (cdi == null) return false ;
-		
-		if ( DeltaSpikeProvider.isDeltaSpikeContainer(cdi) ) {
-			DeltaSpikeProvider.instance(cdi).stopContext(contextType);
-		}
-		else if ( WeldProvider.isWeldContainer(cdi) ) { 
-			WeldProvider.instance(cdi).stopContext(contextType);
-		}
-		else if ( DeltaSpikeProvider.isDeltaSpikePresentAndAllowed() ) {
-			DeltaSpikeProvider.instance(cdi).stopContext(contextType);
-		}
-		
+		provider.stopContext(contextType) ;
 		return true ;
 	}
+	
+	static public boolean startContextRequestScoped() {
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
 		
+		return provider.startContextRequestScoped() ;
+	}
+	
+	static public boolean stopContextRequestScoped() {
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
+		
+		return provider.stopContextRequestScoped() ;
+	}
+	
+	static public boolean startContextApplicationScoped() {
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
+		
+		return provider.startContextApplicationScoped() ;
+	}
+	
+	static public boolean stopContextApplicationScoped() {
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
+		
+		return provider.stopContextApplicationScoped() ;
+	}
+	
+	static public boolean startContextSessionScoped() {
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
+		
+		return provider.startContextSessionScoped() ;
+	}
+	
+	static public boolean stopContextSessionScoped() {
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
+		
+		return provider.stopContextSessionScoped() ;
+	}
+	
+	static public boolean startContextConversationScoped() {
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
+		
+		return provider.startContextConversationScoped() ;
+	}
+	
+	static public boolean stopContextConversationScoped() {
+		CDIProvider provider = getCDIProvider();
+		if (provider == null) return false ;
+		
+		return provider.stopContextConversationScoped();
+	}
+
 }

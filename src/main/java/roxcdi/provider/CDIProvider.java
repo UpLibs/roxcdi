@@ -29,7 +29,6 @@ abstract public class CDIProvider {
 	
 	private final HashMap<String, Class<?>> classCache = new HashMap<>() ;
 	
-	@SuppressWarnings({ "unchecked" })
 	private Class<?> getClass(String className) {
 		try {
 			Class<?> clazz = classCache.get(className) ;
@@ -67,36 +66,36 @@ abstract public class CDIProvider {
 	private static final String JAVAX_ENTERPRISE_CONTEXT_REQUEST_SCOPED = "javax.enterprise.context.RequestScoped";
 	private static final String JAVAX_ENTERPRISE_CONTEXT_APPLICATION_SCOPED = "javax.enterprise.context.ApplicationScoped";
 	
-	public void startContextApplicationScoped() {
-		startContextByClassName(JAVAX_ENTERPRISE_CONTEXT_APPLICATION_SCOPED) ;
+	public boolean startContextApplicationScoped() {
+		return startContextByClassName(JAVAX_ENTERPRISE_CONTEXT_APPLICATION_SCOPED) ;
 	}
 	
-	public void stopContextApplicationScoped() {
-		stopContextByClassName(JAVAX_ENTERPRISE_CONTEXT_APPLICATION_SCOPED) ;
+	public boolean stopContextApplicationScoped() {
+		return stopContextByClassName(JAVAX_ENTERPRISE_CONTEXT_APPLICATION_SCOPED) ;
 	}
 	
-	public void startContextRequestScoped() {
-		startContextByClassName(JAVAX_ENTERPRISE_CONTEXT_REQUEST_SCOPED) ;
+	public boolean startContextRequestScoped() {
+		return startContextByClassName(JAVAX_ENTERPRISE_CONTEXT_REQUEST_SCOPED) ;
 	}
 	
-	public void stopContextRequestScoped() {
-		stopContextByClassName(JAVAX_ENTERPRISE_CONTEXT_REQUEST_SCOPED) ;
+	public boolean stopContextRequestScoped() {
+		return stopContextByClassName(JAVAX_ENTERPRISE_CONTEXT_REQUEST_SCOPED) ;
 	}
 	
-	public void startContextSessionScoped() {
-		startContextByClassName(JAVAX_ENTERPRISE_CONTEXT_SESSION_SCOPED) ;
+	public boolean startContextSessionScoped() {
+		return startContextByClassName(JAVAX_ENTERPRISE_CONTEXT_SESSION_SCOPED) ;
 	}
 	
-	public void stopContextSessionScoped() {
-		stopContextByClassName(JAVAX_ENTERPRISE_CONTEXT_SESSION_SCOPED) ;
+	public boolean stopContextSessionScoped() {
+		return stopContextByClassName(JAVAX_ENTERPRISE_CONTEXT_SESSION_SCOPED) ;
 	}
 	
-	public void startContextConversationScoped() {
-		startContextByClassName(JAVAX_ENTERPRISE_CONTEXT_CONVERSATION_SCOPED) ;
+	public boolean startContextConversationScoped() {
+		return startContextByClassName(JAVAX_ENTERPRISE_CONTEXT_CONVERSATION_SCOPED) ;
 	}
 	
-	public void stopContextConversationScoped() {
-		stopContextByClassName(JAVAX_ENTERPRISE_CONTEXT_CONVERSATION_SCOPED) ;
+	public boolean stopContextConversationScoped() {
+		return stopContextByClassName(JAVAX_ENTERPRISE_CONTEXT_CONVERSATION_SCOPED) ;
 	}
 		
 	abstract public boolean ensureConstructed(Object obj) ;
