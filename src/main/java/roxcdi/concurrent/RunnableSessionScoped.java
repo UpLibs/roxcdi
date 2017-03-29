@@ -5,7 +5,7 @@ import roxcdi.RoxCDI;
 abstract public class RunnableSessionScoped implements Runnable {
 
 	@Override
-	public void run() {
+	final public void run() {
 		RoxCDI.startContextRequestScoped() ;
 		
 		try {
