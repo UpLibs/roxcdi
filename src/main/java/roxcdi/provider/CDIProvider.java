@@ -45,7 +45,7 @@ abstract public class CDIProvider {
 	
 	protected boolean startContextByClassName(String className) {
 		@SuppressWarnings("unchecked")
-		Class<? extends Annotation> clazz = (Class<? extends Annotation>) getClass(JAVAX_ENTERPRISE_CONTEXT_APPLICATION_SCOPED) ;
+		Class<? extends Annotation> clazz = (Class<? extends Annotation>) getClass(className) ;
 		if (clazz == null) return false ;
 		
 		startContext(clazz) ;
@@ -54,7 +54,7 @@ abstract public class CDIProvider {
 	
 	protected boolean stopContextByClassName(String className) {
 		@SuppressWarnings("unchecked")
-		Class<? extends Annotation> clazz = (Class<? extends Annotation>) getClass(JAVAX_ENTERPRISE_CONTEXT_APPLICATION_SCOPED) ;
+		Class<? extends Annotation> clazz = (Class<? extends Annotation>) getClass(className) ;
 		if (clazz == null) return false ;
 		
 		stopContext(clazz) ;
