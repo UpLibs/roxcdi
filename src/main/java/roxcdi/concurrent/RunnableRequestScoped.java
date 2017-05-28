@@ -2,7 +2,7 @@ package roxcdi.concurrent;
 
 import roxcdi.RoxCDI;
 
-abstract public class RunnableRequestScoped implements Runnable {
+abstract public class RunnableRequestScoped extends RunnableScoped {
 
 	@Override
 	final public void run() {
@@ -13,6 +13,7 @@ abstract public class RunnableRequestScoped implements Runnable {
 		}
 		finally {
 			RoxCDI.stopContextRequestScoped();
+			notifyFinished();
 		}
 	}
 	

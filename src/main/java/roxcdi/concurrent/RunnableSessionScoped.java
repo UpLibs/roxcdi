@@ -2,7 +2,7 @@ package roxcdi.concurrent;
 
 import roxcdi.RoxCDI;
 
-abstract public class RunnableSessionScoped implements Runnable {
+abstract public class RunnableSessionScoped extends RunnableScoped {
 
 	@Override
 	final public void run() {
@@ -15,6 +15,7 @@ abstract public class RunnableSessionScoped implements Runnable {
 		}
 		finally {
 			RoxCDI.stopContextSessionScoped();
+			notifyFinished();
 		}
 	}
 	
