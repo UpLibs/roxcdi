@@ -5,11 +5,11 @@ apply plugin: 'jacoco'
 
 sourceCompatibility = 1.8
 group = "roxcdi"
-version = "2.8"
+version = "2.9"
 [compileJava, compileTestJava, javadoc]*.options*.encoding = 'UTF-8'
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.4.1'
+    gradleVersion = '3.5'
 }
 
 task sourcesJar(type: Jar, dependsOn: classes) {

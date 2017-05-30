@@ -44,7 +44,7 @@ final public class WeldProvider extends CDIProvider {
 	
 	static public boolean isWeldContainer(CDI<?> cdi) {
 		String className = cdi.getClass().getName() ;
-		return className.startsWith(WELD_PACKAGE) ;
+		return className.startsWith(JBOSS_PACKAGE) && className.contains(".weld.") ;
 	}
 	
 	static public boolean isProviderProxy(Object obj) {
@@ -101,7 +101,7 @@ final public class WeldProvider extends CDIProvider {
 	
 	private static final String WELD_PROXY_OBJECT_CLASS_NAME = "org.jboss.weld.bean.proxy.ProxyObject";
 	private static final String WELD_CLASS_NAME = "org.jboss.weld.environment.se.Weld";
-	private static final String WELD_PACKAGE = "org.jboss.weld.";
+	private static final String JBOSS_PACKAGE = "org.jboss.";
 	
 	private static final String WELD_REQUEST_CONTEXT_CLASS = "org.jboss.weld.context.RequestContext";
 	private static final String WELD_SESSION_CONTEXT_CLASS = "org.jboss.weld.context.SessionContext";
